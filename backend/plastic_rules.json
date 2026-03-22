@@ -1,0 +1,20 @@
+{
+  "PET": {
+    "reusable": false,
+    "recyclable": true,
+    "heat_safe": false,
+    "explanation": "PET is recyclable but not recommended for repeated reuse as it degrades with heat and time."
+  },
+  "HDPE": {
+    "reusable": true,
+    "recyclable": true,
+    "heat_safe": true,
+    "explanation": "HDPE is durable, heat-resistant, and commonly used for reusable containers."
+  },
+  "PVC": {
+    "reusable": false,
+    "recyclable": false,
+    "heat_safe": false,
+    "explanation": "PVC may release harmful chemicals and is not safe for reuse."
+  }
+}

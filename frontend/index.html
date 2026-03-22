@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PlasticSense</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+  <div class="container">
+    <h1>🌍 PlasticSense</h1>
+    <p class="subtitle">
+      Identify whether a plastic item is reusable, recyclable, or unsafe — and learn why.
+    </p>
+
+    <div class="card">
+      <label for="plastic">Select Plastic Type</label>
+      <select id="plastic">
+        <option value="">-- Choose --</option>
+        <option value="PET">PET (1)</option>
+        <option value="HDPE">HDPE (2)</option>
+        <option value="PVC">PVC (3)</option>
+      </select>
+      <button onclick="analyzePlastic()">Analyze</button>
+      <hr />
+
+        <label>Or upload plastic image</label>
+        <input type="file" id="imageInput" accept="image/*" />
+        <button onclick="analyzeImage()">Analyze Image</button>
+      
+    </div>
+  
+    <div id="result" class="result hidden">
+      <h2 id="decision"></h2>
+      <p id="explanation"></p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
