@@ -45,7 +45,7 @@ async function analyzeImage() {
 
   try {
     const response = await fetch(
-      "http://127.0.0.1:8001/analyze-image",
+      "http://127.0.0.1:8000/analyze-image",
       {
         method: "POST",
         body: formData

@@ -1,17 +1,18 @@
-from PIL import Image
+import tensorflow as tf
 import numpy as np
+from PIL import Image
+import os
+
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.h5")
+
+model = tf.keras.models.load_model(MODEL_PATH)
+
+labels = ["PET", "HDPE", "PVC"]
 
 def predict_plastic_type(image_file):
-    image = Image.open(image_file)
-    image = image.resize((224, 224))
-    image_array = np.array(image)
+    img = Image.open(image_file).resize((128,128))
+    img = np.array(img)/255.0
+    img = np.expand_dims(img, axis=0)
 
-    # Simple placeholder ML logic
-    mean_pixel = image_array.mean()
-
-    if mean_pixel < 85:
-        return "PET"
-    elif mean_pixel < 170:
-        return "HDPE"
-    else:
-        return "PVC"
+    prediction = model.predict(img)
+    return labels[np.argmax(prediction)]

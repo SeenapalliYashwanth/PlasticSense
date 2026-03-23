@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # import from the package context
 from decision_engine import analyze_plastic
-from ml.model import predict_plastic_type
+from ml.predict import predict_plastic_type
 app = FastAPI(title="PlasticSense API")
 
 # enable CORS so the frontend can call the API from a different origin
