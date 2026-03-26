@@ -1,7 +1,8 @@
 fastapi
-python-multipart>=0.0.5
+python-multipart
 uvicorn
 pillow
 numpy
 tensorflow
 icrawler
+pytest

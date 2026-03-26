@@ -1,3 +1,5 @@
+const BASE_URL = "http://127.0.0.1:8000";
+
 // analyze based on dropdown selection
 async function analyzePlastic() {
   console.log('analyzePlastic invoked');
@@ -11,7 +13,7 @@ async function analyzePlastic() {
 
   try {
     const response = await fetch(
-      `http://127.0.0.1:8000/analyze?plastic_type=${plasticType}`
+      `${BASE_URL}/analyze?plastic_type=${plasticType}`
     );
     if (!response.ok) {
       throw new Error(`Server returned ${response.status}`);
@@ -45,7 +47,7 @@ async function analyzeImage() {
 
   try {
     const response = await fetch(
-      "http://127.0.0.1:8000/analyze-image",
+      `${BASE_URL}/analyze-image`,
       {
         method: "POST",
         body: formData
@@ -65,7 +67,8 @@ async function analyzeImage() {
 
     document.getElementById("result").classList.remove("hidden");
   } catch (error) {
-    alert("ML service unavailable.");
-    console.error(error);
+    const msg = error?.message ? `${error.message}` : "Unknown error";
+    alert(`ML service error: ${msg}`);
+    console.error("ML error details:", error);
   }
 }

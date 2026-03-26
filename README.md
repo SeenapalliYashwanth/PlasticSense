@@ -1,35 +1,67 @@
-# PlasticSense 🌍
+# PlasticSense
 
-PlasticSense is a web-based system that helps users determine whether a plastic item is reusable, recyclable, or unsafe.
+PlasticSense is a local web app to identify plastic type and advise on reuse/recycle safety.
 
 ## Features
-- Image-based plastic detection (ML placeholder)
-- Rule-based safety decision engine
-- Explainable output for users
+- Analyze by plastic code: PET, HDPE, PVC
+- Upload image for ML-based plastic type prediction
+- Rule-based decision engine with explanation
+- CORS support for local frontend calls
 
 ## Tech Stack
 - Backend: FastAPI
-- Frontend: HTML, CSS, JavaScript
-- ML: Image-based classification (extensible to CNN)
+- Frontend: HTML/CSS/JS
+- ML: TensorFlow Keras MobileNetV2
 
-## Architecture
-Image → ML Detection → Rule Engine → Explanation
+## Project Structure
+- `backend/`
+  - `app.py`: FastAPI entrypoint
+  - `decision_engine.py`: rule engine
+  - `ml/`: model training/prediction and dataset
+  - `plastic_rules.json`: safety definitions
+- `frontend/`: single-page web UI (`index.html`, `script.js`, `styles.css`)
 
-## Future Improvements
-- Replace placeholder ML with CNN (MobileNetV2)
-- Improve accuracy with real dataset
-- Deploy full system online
+## Setup
+1. Create virtualenv (recommended):
+   ```bash
+   python -m venv venv
+   venv\\Scripts\\activate  # Windows
+   source venv/bin/activate   # macOS/Linux
+   ```
+2. Install dependencies:
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ```
 
-## Design Decisions
-- Used rule-based logic for safety-critical decisions to ensure correctness and explainability  
-- Used ML only for perception (image classification)  
-- Prioritized simplicity and reliability over complex models
+## Run Backend
+```bash
+cd c:\\Users\\PC\\Desktop\\PlasticSense
+C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python310\\python.exe -m uvicorn backend.app:app --reload
+```
 
-## Limitations
-- ML model currently uses placeholder logic  
-- Limited dataset for training  
-- Does not handle mixed plastic materials
+## Run Frontend
+Open `frontend/index.html` directly or use VS Code Live Server.
 
 ## API Endpoints
-GET /analyze  
-POST /analyze-image  
+- `GET /analyze?plastic_type=PET|HDPE|PVC`
+- `POST /analyze-image` (multipart `file`)
+
+### Example
+```bash
+curl "http://127.0.0.1:8000/analyze?plastic_type=PET"
+
+curl -F "file=@backend/ml/dataset/PET/000001.jpg" http://127.0.0.1:8000/analyze-image
+```
+
+## Testing
+```bash
+cd backend
+pytest -q
+```
+
+## Troubleshooting
+- If ML fails with InputLayer / batch_shape errors: model is rebuilt from scratch and dataset training is triggered.
+- TF logs may show a deprecation warning from `tf.losses.sparse_softmax_cross_entropy`; this is non-fatal.
+- Ensure backend is running before frontend usage.
+
