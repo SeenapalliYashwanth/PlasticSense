@@ -19,7 +19,7 @@ PlasticSense is a local web app to identify plastic type and advise on reuse/rec
   - `decision_engine.py`: rule engine
   - `ml/`: model training/prediction and dataset
   - `plastic_rules.json`: safety definitions
-- `frontend/`: single-page web UI (`index.html`, `script.js`, `styles.css`)
+- Root directory: single-page web UI (`index.html`, `script.js`, `styles.css`)
 
 ## Setup
 1. Create virtualenv (recommended):

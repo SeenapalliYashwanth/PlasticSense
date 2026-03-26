@@ -60,13 +60,13 @@ def train_model(model):
     return model
 
 def get_model():
-    """Get or load the model lazily."""
+    """Get or load the model lazily; train if none exists."""
     global _model
 
     if _model is not None:
         return _model
 
-    # Try to load the saved model
+    # Try to load existing model
     if os.path.exists(MODEL_PATH):
         try:
             print(f"Loading model from {MODEL_PATH}")
@@ -75,16 +75,10 @@ def get_model():
         except Exception as e:
             print(f"Saved model load failure: {type(e).__name__}: {e}")
 
+    # Build + train from dataset
     print("Saved model unavailable or invalid. Rebuilding and training a new model.")
     _model = build_model()
-
-    # Train only once if no model file exists
-    try:
-        _model = train_model(_model)
-    except Exception as e:
-        print(f"Model training failed: {type(e).__name__}: {e}")
-        # Keep untrained model as fallback, but suit predictions may be low quality
-
+    _model = train_model(_model)
     return _model
 
 def predict_plastic_type(image_file):
@@ -102,7 +96,12 @@ def predict_plastic_type(image_file):
     
     img = np.expand_dims(img, axis=0)
     
-    prediction = model.predict(img, verbose=0)
-    predicted_index = np.argmax(prediction)
-    
+    prediction = model.predict(img, verbose=0)[0]
+    predicted_index = int(np.argmax(prediction))
+    predicted_confidence = float(np.max(prediction))
+
+    # Avoid blind invalid predictions from an untrained/low-confidence model
+    if predicted_confidence < 0.50:
+        raise RuntimeError(f"Low ML confidence ({predicted_confidence:.2f}); please use a clearer image or retrain model.")
+
     return labels[predicted_index]

@@ -53,17 +53,24 @@ async function analyzeImage() {
         body: formData
       }
     );
-    if (!response.ok) {
-      throw new Error(`Server returned ${response.status}`);
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      throw new Error(`Invalid JSON response from server: ${jsonError.message}`);
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      const details = data?.detail || data?.error || "Unknown server error";
+      throw new Error(`Server returned ${response.status}: ${details}`);
+    }
 
     document.getElementById("decision").innerText =
-      "Decision: " + data.decision;
+      "Decision: " + (data.decision || data.message || "Unknown");
 
     document.getElementById("explanation").innerText =
-      data.explanation + " (Detected via ML)";
+      (data.explanation || data.detail || "No explanation") + " (Detected via ML)";
 
     document.getElementById("result").classList.remove("hidden");
   } catch (error) {

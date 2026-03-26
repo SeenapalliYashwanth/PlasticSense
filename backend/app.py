@@ -8,9 +8,10 @@ from backend.ml.predict import predict_plastic_type
 app = FastAPI(title="PlasticSense API")
 
 # enable CORS so the frontend can call the API from a different origin
+# NOTE: when allow_credentials=True, allow_origins cannot be ["*"] for security compliance.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # restrict in production
+    allow_origins=["http://127.0.0.1:3000", "http://localhost:3000", "http://127.0.0.1:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,11 +30,25 @@ async def analyze_image(file: UploadFile = File(...)):
         # Keep user-friendly response but include detail in logs
         detail = str(e)
         print(f"ML model inference failed: {detail}")
+
+        # Use 422 to indicate client-provided image cannot be classified reliably
         return JSONResponse(
-            status_code=500,
+            status_code=422,
             content={
-                "error": "ML service unavailable",
+                "error": "ML inference failed",
                 "detail": detail,
+                "recommendation": "Please try a clearer picture or choose a different angle, or use the dropdown selection instead."
+            },
+        )
+
+    # Ensure we don't propagate model errors into circulatory logic
+    if not plastic_type or not isinstance(plastic_type, str):
+        print(f"ML returned invalid type: {plastic_type!r}")
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "ML inference returned invalid type",
+                "detail": f"Unexpected model output: {plastic_type!r}",
             },
         )
 
