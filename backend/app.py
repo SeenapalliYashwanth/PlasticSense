@@ -1,21 +1,35 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+import os
+
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 # import from the package context
 from backend.decision_engine import analyze_plastic
 from backend.ml.predict import predict_plastic_type
-app = FastAPI(title="PlasticSense API")
 
-# enable CORS so the frontend can call the API from a different origin
-# NOTE: when allow_credentials=True, allow_origins cannot be ["*"] for security compliance.
+app = FastAPI(title="PlasticSense API")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# enable CORS for local development and for the GitHub Pages frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:3000", "http://localhost:3000", "http://127.0.0.1:8000"],
-    allow_credentials=True,
+    allow_origins=[
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        "http://127.0.0.1:8000",
+        "https://seenapalliyashwanth.github.io",
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.get("/analyze")
 def analyze(plastic_type: str):
@@ -55,3 +69,8 @@ async def analyze_image(file: UploadFile = File(...)):
     result = analyze_plastic(plastic_type)
     result["detected_by"] = "ML Image Analysis"
     return result
+
+
+# Keep API routes above this mount so one deployment can serve the
+# frontend and backend from the same origin.
+app.mount("/", StaticFiles(directory=PROJECT_ROOT, html=True), name="frontend")

@@ -41,7 +41,35 @@ C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python310\\python.exe -m uvicor
 ```
 
 ## Run Frontend
-Open `frontend/index.html` directly or use VS Code Live Server.
+Open `index.html` directly or use VS Code Live Server.
+
+## GitHub Pages
+- GitHub Pages can host the static frontend from the repository root.
+- The dropdown analysis works directly in the browser without the backend.
+- The image upload feature still needs the FastAPI backend on a public URL.
+- After deploying the backend, set `CONFIGURED_API_URL` in `script.js` to that backend URL.
+
+## Recommended Deployment
+For full frontend + backend + ML support, deploy the whole app as one Python web service instead of relying only on GitHub Pages.
+
+- GitHub Pages cannot run FastAPI or TensorFlow because it serves static files only.
+- This repository now includes `render.yaml` and `railway.json` so you can deploy the full app on Render or Railway.
+- The FastAPI app serves `index.html`, `styles.css`, and `script.js` directly from the same origin.
+- The saved model file `backend/ml/model.h5` is included, so prediction can load the model instead of retraining on first request.
+
+### Render Steps
+1. Push this code to GitHub.
+2. Sign in to Render and create a new Blueprint or Web Service from this repository.
+3. Render will use:
+   - Build command: `pip install -r backend/requirements.txt`
+   - Start command: `uvicorn backend.app:app --host 0.0.0.0 --port $PORT`
+4. Open the deployed URL and use the app there. The frontend and backend will be connected automatically.
+
+### Railway Steps
+1. Push this code to GitHub.
+2. Create a new Railway project from the repository.
+3. Railway can use the root `requirements.txt` and `railway.json` in this repo.
+4. Open the deployed URL and use the app there. The frontend and backend will be connected automatically.
 
 ## API Endpoints
 - `GET /analyze?plastic_type=PET|HDPE|PVC`
@@ -63,5 +91,5 @@ pytest -q
 ## Troubleshooting
 - If ML fails with InputLayer / batch_shape errors: model is rebuilt from scratch and dataset training is triggered.
 - TF logs may show a deprecation warning from `tf.losses.sparse_softmax_cross_entropy`; this is non-fatal.
-- Ensure backend is running before frontend usage.
+- Ensure backend is running for image analysis usage.
 
