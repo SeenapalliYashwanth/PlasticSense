@@ -84,6 +84,13 @@ button:hover {
   display: none;
 }
 
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: #5f6b61;
+  text-align: left;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
   .container {

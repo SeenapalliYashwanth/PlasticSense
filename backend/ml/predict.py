@@ -9,6 +9,8 @@ os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
 tf.get_logger().setLevel('ERROR')
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.h5")
+IMAGE_SIZE = (128, 128)
+CONFIDENCE_THRESHOLD = 0.50
 
 # Global model variable - lazy loaded
 _model = None
@@ -20,7 +22,7 @@ def build_model():
     """Build a fresh model."""
     print("Building a fresh model...")
     base_model = tf.keras.applications.MobileNetV2(
-        input_shape=(128, 128, 3),
+        input_shape=(*IMAGE_SIZE, 3),
         include_top=False,
         weights='imagenet'
     )
@@ -50,7 +52,7 @@ def train_model(model):
     print("Training model from dataset -- this may take a few minutes")
     train_data = tf.keras.preprocessing.image_dataset_from_directory(
         TRAIN_DATA_DIR,
-        image_size=(128, 128),
+        image_size=IMAGE_SIZE,
         batch_size=16
     )
 
@@ -81,27 +83,32 @@ def get_model():
     _model = train_model(_model)
     return _model
 
+
+def warmup_model():
+    """Load the model and run one tiny inference to reduce first-request latency."""
+    model = get_model()
+    dummy_input = np.zeros((1, IMAGE_SIZE[0], IMAGE_SIZE[1], 3), dtype=np.float32)
+    model.predict(dummy_input, verbose=0)
+
+
+def _prepare_image(image_file):
+    """Convert uploads to a small RGB tensor for faster inference."""
+    image = Image.open(image_file).convert("RGB")
+    image = image.resize(IMAGE_SIZE, Image.Resampling.BILINEAR)
+    image_array = np.asarray(image, dtype=np.float32) / 255.0
+    return np.expand_dims(image_array, axis=0)
+
 def predict_plastic_type(image_file):
     """Predict the plastic type from an image file."""
     model = get_model()
-    
-    img = Image.open(image_file).resize((128, 128))
-    img = np.array(img) / 255.0
-    
-    # Handle grayscale images by converting to RGB
-    if len(img.shape) == 2:
-        img = np.stack([img] * 3, axis=-1)
-    elif img.shape[2] == 4:  # RGBA
-        img = img[:, :, :3]
-    
-    img = np.expand_dims(img, axis=0)
-    
-    prediction = model.predict(img, verbose=0)[0]
+
+    image_tensor = _prepare_image(image_file)
+    prediction = model.predict(image_tensor, verbose=0)[0]
     predicted_index = int(np.argmax(prediction))
     predicted_confidence = float(np.max(prediction))
 
     # Avoid blind invalid predictions from an untrained/low-confidence model
-    if predicted_confidence < 0.50:
+    if predicted_confidence < CONFIDENCE_THRESHOLD:
         raise RuntimeError(f"Low ML confidence ({predicted_confidence:.2f}); please use a clearer image or retrain model.")
 
     return labels[predicted_index]

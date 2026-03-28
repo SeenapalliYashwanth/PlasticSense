@@ -1,10 +1,6 @@
 const HOSTNAME = window.location.hostname;
 const IS_LOCAL = HOSTNAME === "127.0.0.1" || HOSTNAME === "localhost";
-const IS_GITHUB_PAGES = HOSTNAME === "seenapalliyashwanth.github.io";
-
-const CONFIGURED_API_URL = IS_LOCAL
-  ? "http://127.0.0.1:8000"
-  : "";
+const CONFIGURED_API_URL = IS_LOCAL ? "http://127.0.0.1:8000" : "";
 
 const BASE_URL = CONFIGURED_API_URL.replace(/\/$/, "");
 
@@ -32,23 +28,64 @@ function showResult(decision, explanation) {
   document.getElementById("result").classList.remove("hidden");
 }
 
+function setLoading(button, isLoading, loadingText) {
+  if (!button) {
+    return;
+  }
+  button.disabled = isLoading;
+  button.innerText = isLoading ? loadingText : button.dataset.defaultText;
+}
+
+async function buildOptimizedImage(file) {
+  const bitmap = await createImageBitmap(file);
+  const maxSize = 512;
+  const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d", { alpha: false });
+  context.drawImage(bitmap, 0, 0, width, height);
+
+  const blob = await new Promise((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.82)
+  );
+
+  if (!blob) {
+    throw new Error("Image optimization failed.");
+  }
+
+  return new File([blob], "optimized-upload.jpg", { type: "image/jpeg" });
+}
+
+function getButtonByLabel(text) {
+  return Array.from(document.querySelectorAll("button")).find(
+    (button) => button.innerText.trim() === text
+  );
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("button").forEach((button) => {
+    button.dataset.defaultText = button.innerText;
+  });
+});
+
 // analyze based on dropdown selection
 async function analyzePlastic() {
   console.log('analyzePlastic invoked');
   const plasticType = document.getElementById("plastic").value;
+  const button = getButtonByLabel("Analyze");
 
   if (!plasticType) {
     alert("Please select a plastic type.");
     return;
   }
 
-  const localRule = PLASTIC_RULES[plasticType];
-  if (IS_GITHUB_PAGES && localRule) {
-    showResult(localRule.decision, `${localRule.explanation} (Local analysis)`);
-    return;
-  }
-
   try {
+    setLoading(button, true, "Analyzing...");
     const response = await fetch(
       `${BASE_URL}/analyze?plastic_type=${plasticType}`
     );
@@ -59,8 +96,16 @@ async function analyzePlastic() {
 
     showResult(data.decision, data.explanation);
   } catch (error) {
-    alert("Analysis service not reachable. Please try the dropdown option or start the backend.");
+    const localRule = PLASTIC_RULES[plasticType];
+    if (localRule) {
+      showResult(localRule.decision, `${localRule.explanation} (Fallback analysis)`);
+      return;
+    }
+
+    alert("Analysis service not reachable. Please try again in a moment.");
     console.error(error);
+  } finally {
+    setLoading(button, false);
   }
 }
 
@@ -68,22 +113,19 @@ async function analyzePlastic() {
 async function analyzeImage() {
   console.log('analyzeImage invoked');
   const input = document.getElementById("imageInput");
+  const button = getButtonByLabel("Analyze Image");
   if (input.files.length === 0) {
     alert("Please upload an image.");
     return;
   }
 
-  if (IS_GITHUB_PAGES && !BASE_URL) {
-    alert(
-      "Image analysis needs a deployed backend API. The GitHub Pages site can use the dropdown locally, but image upload will work only after you deploy the backend and set its URL in script.js."
-    );
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("file", input.files[0]);
-
   try {
+    setLoading(button, true, "Optimizing...");
+    const optimizedFile = await buildOptimizedImage(input.files[0]);
+    const formData = new FormData();
+    formData.append("file", optimizedFile);
+
+    setLoading(button, true, "Running ML...");
     const response = await fetch(
       `${BASE_URL}/analyze-image`,
       {
@@ -112,5 +154,7 @@ async function analyzeImage() {
     const msg = error?.message ? `${error.message}` : "Unknown error";
     alert(`ML service error: ${msg}`);
     console.error("ML error details:", error);
+  } finally {
+    setLoading(button, false);
   }
 }

@@ -1,4 +1,5 @@
 import os
+import threading
 
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 # import from the package context
 from backend.decision_engine import analyze_plastic
-from backend.ml.predict import predict_plastic_type
+from backend.ml.predict import predict_plastic_type, warmup_model
 
 app = FastAPI(title="PlasticSense API")
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,6 +31,12 @@ app.add_middleware(
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.on_event("startup")
+def preload_model():
+    # Warm the ML model in the background so the first image request is faster.
+    threading.Thread(target=warmup_model, daemon=True).start()
 
 @app.get("/analyze")
 def analyze(plastic_type: str):
