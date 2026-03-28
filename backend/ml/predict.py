@@ -29,7 +29,16 @@ def get_model():
         )
 
     print(f"Loading model from {MODEL_PATH}")
-    _model = tf.keras.models.load_model(MODEL_PATH)
+    try:
+        _model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+    except TypeError:
+        # Older/newer Keras builds vary in supported load_model kwargs.
+        _model = tf.keras.models.load_model(MODEL_PATH)
+    except Exception as exc:
+        raise RuntimeError(
+            "Model file could not be loaded in the current TensorFlow/Keras runtime. "
+            "This is usually a version compatibility issue, not a missing frontend/backend file."
+        ) from exc
     return _model
 
 

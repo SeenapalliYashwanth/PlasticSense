@@ -3,6 +3,6 @@ python-multipart
 uvicorn
 pillow
 numpy
-tensorflow
+tensorflow==2.15.0
 icrawler
 pytest
