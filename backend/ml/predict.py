@@ -11,7 +11,7 @@ tf.get_logger().setLevel('ERROR')
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.h5")
 WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "model.weights.h5")
 IMAGE_SIZE = (128, 128)
-CONFIDENCE_THRESHOLD = 0.50
+CONFIDENCE_THRESHOLD = 0.35
 
 # Global model variable - lazy loaded
 _model = None
@@ -94,7 +94,15 @@ def predict_plastic_type(image_file):
     predicted_confidence = float(np.max(prediction))
 
     # Avoid blind invalid predictions from an untrained/low-confidence model
-    if predicted_confidence < CONFIDENCE_THRESHOLD:
-        raise RuntimeError(f"Low ML confidence ({predicted_confidence:.2f}); please use a clearer image or retrain model.")
+    result = {
+        "plastic_type": labels[predicted_index],
+        "confidence": predicted_confidence,
+    }
 
-    return labels[predicted_index]
+    if predicted_confidence < CONFIDENCE_THRESHOLD:
+        result["warning"] = (
+            f"Low confidence ({predicted_confidence:.2f}). Result may be less reliable; "
+            "try a clearer close-up image for better accuracy."
+        )
+
+    return result

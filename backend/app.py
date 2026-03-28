@@ -46,7 +46,7 @@ def analyze(plastic_type: str):
 @app.post("/analyze-image")
 async def analyze_image(file: UploadFile = File(...)):
     try:
-        plastic_type = predict_plastic_type(file.file)
+        prediction = predict_plastic_type(file.file)
     except Exception as e:
         # Keep user-friendly response but include detail in logs
         detail = str(e)
@@ -63,18 +63,22 @@ async def analyze_image(file: UploadFile = File(...)):
         )
 
     # Ensure we don't propagate model errors into circulatory logic
+    plastic_type = prediction.get("plastic_type")
     if not plastic_type or not isinstance(plastic_type, str):
-        print(f"ML returned invalid type: {plastic_type!r}")
+        print(f"ML returned invalid type: {prediction!r}")
         return JSONResponse(
             status_code=422,
             content={
                 "error": "ML inference returned invalid type",
-                "detail": f"Unexpected model output: {plastic_type!r}",
+                "detail": f"Unexpected model output: {prediction!r}",
             },
         )
 
     result = analyze_plastic(plastic_type)
     result["detected_by"] = "ML Image Analysis"
+    result["confidence"] = prediction.get("confidence")
+    if prediction.get("warning"):
+        result["warning"] = prediction["warning"]
     return result
 
 
