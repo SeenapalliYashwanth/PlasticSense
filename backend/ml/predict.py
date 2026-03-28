@@ -72,9 +72,6 @@ def get_model():
     print(f"Loading model from {MODEL_PATH}")
     try:
         _model = tf.keras.models.load_model(MODEL_PATH, compile=False)
-    except TypeError:
-        # Older/newer Keras builds vary in supported load_model kwargs.
-        _model = tf.keras.models.load_model(MODEL_PATH)
     except Exception as exc:
         try:
             _model = _load_h5_model_without_quant_config(MODEL_PATH)
