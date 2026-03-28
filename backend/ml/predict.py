@@ -1,9 +1,7 @@
 import os
-import json
 import numpy as np
 from PIL import Image
 import tensorflow as tf
-import h5py
 
 # reduce TensorFlow logging spam in terminal
 os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
@@ -18,43 +16,25 @@ CONFIDENCE_THRESHOLD = 0.50
 _model = None
 labels = ["PET", "HDPE", "PVC"]
 
+def _build_inference_model():
+    """Rebuild the known training architecture and load weights only."""
+    base_model = tf.keras.applications.MobileNetV2(
+        input_shape=(*IMAGE_SIZE, 3),
+        include_top=False,
+        weights=None,
+    )
+    base_model.trainable = False
 
-def _strip_unsupported_config(value):
-    """Recursively remove config keys unsupported by the deployed Keras runtime."""
-    if isinstance(value, dict):
-        cleaned = {
-            key: _strip_unsupported_config(inner_value)
-            for key, inner_value in value.items()
-            if key not in {"quantization_config", "optional"}
-        }
+    model = tf.keras.Sequential([
+        base_model,
+        tf.keras.layers.GlobalAveragePooling2D(),
+        tf.keras.layers.Dense(128, activation="relu"),
+        tf.keras.layers.Dense(3, activation="softmax"),
+    ])
 
-        class_name = cleaned.get("class_name")
-        config = cleaned.get("config")
-        if class_name == "InputLayer" and isinstance(config, dict):
-            if "batch_shape" in config and "batch_input_shape" not in config:
-                config["batch_input_shape"] = config.pop("batch_shape")
-            config.pop("optional", None)
-
-        return cleaned
-    if isinstance(value, list):
-        return [_strip_unsupported_config(item) for item in value]
-    return value
-
-
-def _load_h5_model_without_quant_config(model_path):
-    """Load legacy H5 models by stripping unsupported quantization config fields."""
-    with h5py.File(model_path, "r") as h5_file:
-        model_config = h5_file.attrs.get("model_config")
-
-    if model_config is None:
-        raise RuntimeError("model_config metadata is missing from the H5 model file.")
-
-    if isinstance(model_config, bytes):
-        model_config = model_config.decode("utf-8")
-
-    cleaned_config = _strip_unsupported_config(json.loads(model_config))
-    model = tf.keras.models.model_from_json(json.dumps(cleaned_config))
-    model.load_weights(model_path)
+    # Build weights before loading from the H5 file.
+    model(np.zeros((1, IMAGE_SIZE[0], IMAGE_SIZE[1], 3), dtype=np.float32))
+    model.load_weights(MODEL_PATH)
     return model
 
 def get_model():
@@ -72,13 +52,13 @@ def get_model():
     print(f"Loading model from {MODEL_PATH}")
     try:
         _model = tf.keras.models.load_model(MODEL_PATH, compile=False)
-    except Exception as exc:
+    except Exception:
         try:
-            _model = _load_h5_model_without_quant_config(MODEL_PATH)
+            _model = _build_inference_model()
         except Exception as fallback_exc:
             raise RuntimeError(
-                "Model file could not be loaded in the current TensorFlow/Keras runtime. "
-                "This is usually a version compatibility issue, not a missing frontend/backend file."
+                "Model file could not be loaded in the current TensorFlow/Keras runtime, "
+                "and rebuilding the known architecture from saved weights also failed."
             ) from fallback_exc
     return _model
 
