@@ -2,6 +2,22 @@
 
 PlasticSense is a local web app to identify plastic type and advise on reuse/recycle safety.
 
+## Live Demo
+- App: https://supportive-peace-production.up.railway.app/
+- Health Check: https://supportive-peace-production.up.railway.app/health
+
+## Preview
+Add these files in `assets/` to show the live UI on GitHub:
+- `assets/hero-ui.png`
+- `assets/analyze-demo.gif`
+
+Example markdown to use after you add them:
+```md
+![PlasticSense UI](assets/hero-ui.png)
+
+![PlasticSense Demo](assets/analyze-demo.gif)
+```
+
 ## Features
 - Analyze by plastic code: PET, HDPE, PVC
 - Upload image for ML-based plastic type prediction
