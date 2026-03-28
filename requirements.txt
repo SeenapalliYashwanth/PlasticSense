@@ -1,1 +1,8 @@
--r backend/requirements.txt
+fastapi
+python-multipart
+uvicorn
+pillow
+numpy
+tensorflow
+icrawler
+pytest
