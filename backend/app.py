@@ -52,12 +52,12 @@ async def analyze_image(file: UploadFile = File(...)):
         detail = str(e)
         print(f"ML model inference failed: {detail}")
 
-        # Use 422 to indicate client-provided image cannot be classified reliably
+        # Use 422 to indicate the uploaded image could not be analyzed cleanly.
         return JSONResponse(
             status_code=422,
             content={
                 "error": "ML inference failed",
-                "detail": detail,
+                "detail": "Image analysis is temporarily unavailable. Please try again in a moment or use the dropdown selection.",
                 "recommendation": "Please try a clearer picture or choose a different angle, or use the dropdown selection instead."
             },
         )

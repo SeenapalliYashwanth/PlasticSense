@@ -142,8 +142,8 @@ async function analyzeImage() {
     }
 
     if (!response.ok) {
-      const details = data?.detail || data?.error || "Unknown server error";
-      throw new Error(`Server returned ${response.status}: ${details}`);
+      const details = data?.recommendation || data?.detail || "Image analysis is temporarily unavailable.";
+      throw new Error(details);
     }
 
     showResult(
@@ -151,8 +151,8 @@ async function analyzeImage() {
       (data.explanation || data.detail || "No explanation") + " (Detected via ML)"
     );
   } catch (error) {
-    const msg = error?.message ? `${error.message}` : "Unknown error";
-    alert(`ML service error: ${msg}`);
+    const msg = error?.message || "Image analysis is temporarily unavailable. Please try again.";
+    alert(msg);
     console.error("ML error details:", error);
   } finally {
     setLoading(button, false);
