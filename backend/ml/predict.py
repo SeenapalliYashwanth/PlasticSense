@@ -1,7 +1,9 @@
 import os
+import json
 import numpy as np
 from PIL import Image
 import tensorflow as tf
+import h5py
 
 # reduce TensorFlow logging spam in terminal
 os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
@@ -15,6 +17,36 @@ CONFIDENCE_THRESHOLD = 0.50
 # Global model variable - lazy loaded
 _model = None
 labels = ["PET", "HDPE", "PVC"]
+
+
+def _strip_unsupported_config(value):
+    """Recursively remove config keys unsupported by the deployed Keras runtime."""
+    if isinstance(value, dict):
+        return {
+            key: _strip_unsupported_config(inner_value)
+            for key, inner_value in value.items()
+            if key != "quantization_config"
+        }
+    if isinstance(value, list):
+        return [_strip_unsupported_config(item) for item in value]
+    return value
+
+
+def _load_h5_model_without_quant_config(model_path):
+    """Load legacy H5 models by stripping unsupported quantization config fields."""
+    with h5py.File(model_path, "r") as h5_file:
+        model_config = h5_file.attrs.get("model_config")
+
+    if model_config is None:
+        raise RuntimeError("model_config metadata is missing from the H5 model file.")
+
+    if isinstance(model_config, bytes):
+        model_config = model_config.decode("utf-8")
+
+    cleaned_config = _strip_unsupported_config(json.loads(model_config))
+    model = tf.keras.models.model_from_json(json.dumps(cleaned_config))
+    model.load_weights(model_path)
+    return model
 
 def get_model():
     """Load the saved inference model lazily."""
@@ -35,10 +67,13 @@ def get_model():
         # Older/newer Keras builds vary in supported load_model kwargs.
         _model = tf.keras.models.load_model(MODEL_PATH)
     except Exception as exc:
-        raise RuntimeError(
-            "Model file could not be loaded in the current TensorFlow/Keras runtime. "
-            "This is usually a version compatibility issue, not a missing frontend/backend file."
-        ) from exc
+        try:
+            _model = _load_h5_model_without_quant_config(MODEL_PATH)
+        except Exception as fallback_exc:
+            raise RuntimeError(
+                "Model file could not be loaded in the current TensorFlow/Keras runtime. "
+                "This is usually a version compatibility issue, not a missing frontend/backend file."
+            ) from fallback_exc
     return _model
 
 
