@@ -16,71 +16,20 @@ CONFIDENCE_THRESHOLD = 0.50
 _model = None
 labels = ["PET", "HDPE", "PVC"]
 
-TRAIN_DATA_DIR = os.path.join(os.path.dirname(__file__), "dataset")
-
-def build_model():
-    """Build a fresh model."""
-    print("Building a fresh model...")
-    base_model = tf.keras.applications.MobileNetV2(
-        input_shape=(*IMAGE_SIZE, 3),
-        include_top=False,
-        weights='imagenet'
-    )
-    base_model.trainable = False
-
-    model = tf.keras.Sequential([
-        base_model,
-        tf.keras.layers.GlobalAveragePooling2D(),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dense(3, activation='softmax')
-    ])
-
-    model.compile(
-        optimizer='adam',
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
-    )
-
-    return model
-
-
-def train_model(model):
-    """Train model on built-in dataset if pre-trained weights are unavailable."""
-    if not os.path.exists(TRAIN_DATA_DIR):
-        raise FileNotFoundError(f"Training data folder not found: {TRAIN_DATA_DIR}")
-
-    print("Training model from dataset -- this may take a few minutes")
-    train_data = tf.keras.preprocessing.image_dataset_from_directory(
-        TRAIN_DATA_DIR,
-        image_size=IMAGE_SIZE,
-        batch_size=16
-    )
-
-    model.fit(train_data, epochs=5, verbose=1)
-    model.save(MODEL_PATH)
-
-    return model
-
 def get_model():
-    """Get or load the model lazily; train if none exists."""
+    """Load the saved inference model lazily."""
     global _model
 
     if _model is not None:
         return _model
 
-    # Try to load existing model
-    if os.path.exists(MODEL_PATH):
-        try:
-            print(f"Loading model from {MODEL_PATH}")
-            _model = tf.keras.models.load_model(MODEL_PATH)
-            return _model
-        except Exception as e:
-            print(f"Saved model load failure: {type(e).__name__}: {e}")
+    if not os.path.exists(MODEL_PATH):
+        raise FileNotFoundError(
+            f"Saved model not found at {MODEL_PATH}. The deployed app expects a pre-trained model file."
+        )
 
-    # Build + train from dataset
-    print("Saved model unavailable or invalid. Rebuilding and training a new model.")
-    _model = build_model()
-    _model = train_model(_model)
+    print(f"Loading model from {MODEL_PATH}")
+    _model = tf.keras.models.load_model(MODEL_PATH)
     return _model
 
 
