@@ -37,13 +37,8 @@ function setLoading(button, isLoading, loadingText) {
 }
 
 async function buildOptimizedImage(file) {
-  // Keep the original upload for normal-sized files to avoid hurting ML accuracy.
-  if (file.size <= 2 * 1024 * 1024) {
-    return file;
-  }
-
   const bitmap = await createImageBitmap(file);
-  const maxSize = 1024;
+  const maxSize = 512;
   const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
   const width = Math.max(1, Math.round(bitmap.width * scale));
   const height = Math.max(1, Math.round(bitmap.height * scale));
@@ -55,18 +50,15 @@ async function buildOptimizedImage(file) {
   const context = canvas.getContext("2d", { alpha: false });
   context.drawImage(bitmap, 0, 0, width, height);
 
-  const outputType = file.type === "image/png" ? "image/png" : "image/jpeg";
-  const quality = outputType === "image/png" ? undefined : 0.92;
   const blob = await new Promise((resolve) =>
-    canvas.toBlob(resolve, outputType, quality)
+    canvas.toBlob(resolve, "image/jpeg", 0.82)
   );
 
   if (!blob) {
     throw new Error("Image optimization failed.");
   }
 
-  const outputName = outputType === "image/png" ? "optimized-upload.png" : "optimized-upload.jpg";
-  return new File([blob], outputName, { type: outputType });
+  return new File([blob], "optimized-upload.jpg", { type: "image/jpeg" });
 }
 
 function getButtonByLabel(text) {
@@ -150,21 +142,17 @@ async function analyzeImage() {
     }
 
     if (!response.ok) {
-      const details = data?.recommendation || data?.detail || "Image analysis is temporarily unavailable.";
-      throw new Error(details);
+      const details = data?.detail || data?.error || "Unknown server error";
+      throw new Error(`Server returned ${response.status}: ${details}`);
     }
 
     showResult(
       data.decision || data.message || "Unknown",
-      [
-        (data.explanation || data.detail || "No explanation") + " (Detected via ML)",
-        data.warning ? data.warning : "",
-        typeof data.confidence === "number" ? `Confidence: ${(data.confidence * 100).toFixed(1)}%` : ""
-      ].filter(Boolean).join(" ")
+      (data.explanation || data.detail || "No explanation") + " (Detected via ML)"
     );
   } catch (error) {
-    const msg = error?.message || "Image analysis is temporarily unavailable. Please try again.";
-    alert(msg);
+    const msg = error?.message ? `${error.message}` : "Unknown error";
+    alert(`ML service error: ${msg}`);
     console.error("ML error details:", error);
   } finally {
     setLoading(button, false);

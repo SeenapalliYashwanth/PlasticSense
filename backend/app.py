@@ -46,39 +46,35 @@ def analyze(plastic_type: str):
 @app.post("/analyze-image")
 async def analyze_image(file: UploadFile = File(...)):
     try:
-        prediction = predict_plastic_type(file.file)
+        plastic_type = predict_plastic_type(file.file)
     except Exception as e:
         # Keep user-friendly response but include detail in logs
         detail = str(e)
         print(f"ML model inference failed: {detail}")
 
-        # Use 422 to indicate the uploaded image could not be analyzed cleanly.
+        # Use 422 to indicate client-provided image cannot be classified reliably
         return JSONResponse(
             status_code=422,
             content={
                 "error": "ML inference failed",
-                "detail": "Image analysis is temporarily unavailable. Please try again in a moment or use the dropdown selection.",
+                "detail": detail,
                 "recommendation": "Please try a clearer picture or choose a different angle, or use the dropdown selection instead."
             },
         )
 
     # Ensure we don't propagate model errors into circulatory logic
-    plastic_type = prediction.get("plastic_type")
     if not plastic_type or not isinstance(plastic_type, str):
-        print(f"ML returned invalid type: {prediction!r}")
+        print(f"ML returned invalid type: {plastic_type!r}")
         return JSONResponse(
             status_code=422,
             content={
                 "error": "ML inference returned invalid type",
-                "detail": f"Unexpected model output: {prediction!r}",
+                "detail": f"Unexpected model output: {plastic_type!r}",
             },
         )
 
     result = analyze_plastic(plastic_type)
     result["detected_by"] = "ML Image Analysis"
-    result["confidence"] = prediction.get("confidence")
-    if prediction.get("warning"):
-        result["warning"] = prediction["warning"]
     return result
 
 
