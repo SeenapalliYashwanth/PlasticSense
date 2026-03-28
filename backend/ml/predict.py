@@ -22,11 +22,20 @@ labels = ["PET", "HDPE", "PVC"]
 def _strip_unsupported_config(value):
     """Recursively remove config keys unsupported by the deployed Keras runtime."""
     if isinstance(value, dict):
-        return {
+        cleaned = {
             key: _strip_unsupported_config(inner_value)
             for key, inner_value in value.items()
-            if key != "quantization_config"
+            if key not in {"quantization_config", "optional"}
         }
+
+        class_name = cleaned.get("class_name")
+        config = cleaned.get("config")
+        if class_name == "InputLayer" and isinstance(config, dict):
+            if "batch_shape" in config and "batch_input_shape" not in config:
+                config["batch_input_shape"] = config.pop("batch_shape")
+            config.pop("optional", None)
+
+        return cleaned
     if isinstance(value, list):
         return [_strip_unsupported_config(item) for item in value]
     return value
